@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP8266 Monitor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <div class="topnav">
+        <h1>ESP8266 PowerMonitor</h1>
+    </div>
+    <div class="content">
+        <div class="card-grid">
+            <div class="card">
+                <p class="card-title">Потребление:</p>
+                <p style="font-size:70px;margin:0" class="state"><span id="CurrentValue"></span> A</p>
+            </div>
+            <div class="card">
+                <p class="card-title">Максимальный ток:</p>
+                <p class="switch">
+                    <input type="range" oninput="dinamycSlider(this.value)" onchange="updateSlider(this)" id="slider1" min="0" max="100" step="1" value ="0" class="slider" list="rangeList">
+                </p>
+                <p style="font-size:40px;margin:0" class="state"><span id="sliderValue"></span> A</p>
+            </div>
+            <!-- <div class="card">
+                <p class="card-title"> Fader 3</p>
+                <p class="switch">
+                    <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1" value ="0" class="slider">
+                </p>
+                <p class="state">Brightness: <span id="sliderValue3"></span> &percnt;</p>
+            </div> -->
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

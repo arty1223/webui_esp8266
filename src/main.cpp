@@ -76,9 +76,9 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
       dutyCycle = sliderValue.toInt();
       // Serial.println(dutyCycle);
-      Serial.print(getSliderValues());
-      Serial.print(" ");
-      Serial.println(DAC(dutyCycle));
+      // Serial.print(getSliderValues());
+      // Serial.print(" ");
+      // Serial.println(DAC(dutyCycle));
       notifyClients(getSliderValues());
       EEPROM.put(0,dutyCycle);
       EEPROM.commit();
@@ -88,6 +88,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     }
   }
 }
+
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   switch (type) {
     case WS_EVT_CONNECT:

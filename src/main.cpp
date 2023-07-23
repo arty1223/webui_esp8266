@@ -5,18 +5,17 @@
 #include "LittleFS.h"
 #include <Arduino_JSON.h>
 #include <EEPROM.h>
+#include <TLC5615.h>
 
-#define AP_SSID "СЕТЬ"
-#define AP_PASS "ПАРОЛЬ"
+#define AP_SSID "Beeline_2G_FF897F"
+#define AP_PASS "A16A23S01@sk"
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
-
-
 AsyncWebSocket ws("/ws");
+TLC5615 dac(D8);
 
 String message = "";
-
 String sliderValue = "0";
 
 
@@ -31,12 +30,13 @@ void handleNotFound();
 //Get Slider Values
 String getSliderValues(){
   // Values["CurrentValue"] = String(CurrentValue);
-  Values["sliderValue"] = String(sliderValue);
+  Values["sliderValue"] = sliderValue;
   String jsonString = JSON.stringify(Values);
   return jsonString;
 }
 
 float measure();
+int DAC(int val);
 // Initialize LittleFS
 void initFS() {
   if (!LittleFS.begin()) {
@@ -47,7 +47,7 @@ void initFS() {
   }
 }
 
-// Initialize WiFi
+// WiFi
 void initWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(AP_SSID, AP_PASS);
@@ -75,8 +75,10 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       sliderValue = message.substring(2);      
       // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
       dutyCycle = sliderValue.toInt();
-      Serial.println(dutyCycle);
+      // Serial.println(dutyCycle);
       Serial.print(getSliderValues());
+      Serial.print(" ");
+      Serial.println(DAC(dutyCycle));
       notifyClients(getSliderValues());
       EEPROM.put(0,dutyCycle);
       EEPROM.commit();
@@ -112,20 +114,24 @@ void setup() {
   Serial.begin(115200);
   EEPROM.begin(4);
   EEPROM.get(0, dutyCycle);
-  Serial.println("");
-  Serial.println(dutyCycle);
+  // Serial.println("");
+  // Serial.println(dutyCycle);
+  dac.begin();
+  dac.analogWrite(DAC(dutyCycle));
+
   initFS();
   initWiFi();
   initWebSocket();
   
-  // Web Server Root URL
+  //Коренной каталог
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/index.html", "text/html");
   });
   
   server.serveStatic("/", LittleFS, "/");
-  // Start server
+  
   server.begin();
+
   sliderValue = String(dutyCycle);
   Values["sliderValue"] = sliderValue;
   // Serial.println(JSON.stringify(Values));
@@ -135,7 +141,12 @@ void setup() {
 void loop() {
   static uint64_t tmr, tmr2;
   static float current; // текущее значение тока
-  static JSONVar CurVal; 
+  static JSONVar CurVal;  
+  static int dacval;
+
+  dacval = DAC(dutyCycle);
+  dac.analogWrite(dacval);
+
   if(millis() - tmr > 50){    
     tmr = millis();
     current = measure();
@@ -143,19 +154,19 @@ void loop() {
   if(millis() - tmr2 > 250){
     tmr2 = millis();
     CurVal["CurrentValue"] = String(current);
-    notifyClients(JSON.stringify(CurVal));    
+    notifyClients(JSON.stringify(CurVal));
   }  
   ws.cleanupClients();
 }
 
-float measure(){
-  float cur = analogRead(A0);  
-  // возможно нужна дополнительная калибровка, я добился точности в 1-6 сотых на всем диапозоне
-  // R1 = 1.2k, R2 = 330, 0-15.3v 14.7 в формуле - подбирал чтобы было ± точно с моими резисторами
-  // u = ((u - 0) * 14.7) / 4095; - для 32   
-  // cur = ((cur - 0) * 14.76) / 1023; // u напряжение с выхода датчика  
+float measure(){ // Измерение потребляемого тока;
+  float cur = analogRead(A0);
   cur = (cur * 3.08) / 10.23 - 169.81;
-  // float I = (cur - U / 2) / (U * 0.02);
-  // Serial.print(cur); Serial.print(" current:");  // Serial.println(I);
   return cur;
+}
+
+int DAC(int val){// Преобразование значения val (0 - 100) в напряжение 0 - 3V в 10битном формате
+  int voltage;
+  voltage = (169.81 + val) * 10.23 / 3.08;
+  return voltage;
 }

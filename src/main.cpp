@@ -7,8 +7,8 @@
 #include <EEPROM.h>
 #include <TLC5615.h>
 
-#define AP_SSID "Beeline_2G_FF897F"
-#define AP_PASS "A16A23S01@sk"
+#define AP_SSID "ИМЯ СЕТИ"
+#define AP_PASS "ПАРОЛЬ"
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -18,8 +18,19 @@ TLC5615 dac(D8);
 String message = "";
 String sliderValue = "0";
 
+String ButtValue1 = "false";
+String ButtValue2 = "false";
+String ButtValue3 = "false";
+String ButtValue4 = "false";
+
+#define PowerON D4
+#define EmergencyShutdown D3
+#define PositiveInput D0
+#define NegativeInput D6
 
 int dutyCycle;
+
+bool Button1,Button2,Button3,Button4;
 
 //Json Variable to Hold Values
 JSONVar Values;
@@ -27,10 +38,18 @@ JSONVar Values;
 void handleMain();
 void handleNotFound();
 
-//Get Slider Values
-String getSliderValues(){
-  // Values["CurrentValue"] = String(CurrentValue);
+//Get Values
+String getSliderValues(){  
   Values["sliderValue"] = sliderValue;
+  String jsonString = JSON.stringify(Values);
+  return jsonString;
+}
+
+String getButtonValues(){  
+  Values["buttonValue1"] = ButtValue1;
+  Values["buttonValue2"] = ButtValue2;
+  Values["buttonValue3"] = ButtValue3;
+  Values["buttonValue4"] = ButtValue4;
   String jsonString = JSON.stringify(Values);
   return jsonString;
 }
@@ -70,18 +89,52 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    message = (char*)data;
+    message = (char*)data;    
     if (message.indexOf("1s") >= 0) {
       sliderValue = message.substring(2);      
       // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
       dutyCycle = sliderValue.toInt();
       // Serial.println(dutyCycle);
       // Serial.print(getSliderValues());
-      // Serial.print(" ");
-      // Serial.println(DAC(dutyCycle));
       notifyClients(getSliderValues());
       EEPROM.put(0,dutyCycle);
-      EEPROM.commit();
+      EEPROM.commit();      
+    }
+    
+    bool val;
+    if (message.substring(2) == "true"){
+      val = true;
+    }else{
+      val = false;
+    }
+
+    if (message.indexOf("1b") >= 0) {
+      // ButtValue1 = message.substring(2);      
+      // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
+      Button1 = val;
+      // Serial.println(Button1);
+      // Serial.println(getButtonValues());
+    }
+    if (message.indexOf("2b") >= 0) {
+      // ButtValue2 = message.substring(2);      
+      // Button1 = map(sliderValue.toInt(), 0, 100, 0, 1023);
+      Button2 = val;
+      // Serial.println(Button2);
+      // Serial.println(getButtonValues());
+    }
+    if (message.indexOf("3b") >= 0) {
+      // ButtValue3 = message.substring(2);      
+      // Button1 = map(sliderValue.toInt(), 0, 100, 0, 1023);
+      Button3 = val;
+      // Serial.println(Button3);
+      // Serial.println(getButtonValues());
+    }
+    if (message.indexOf("4b") >= 0) {
+      // ButtValue4 = message.substring(2);      
+      // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
+      Button4 = val;
+      // Serial.println(Button4);
+      // Serial.println(getButtonValues());
     }
     if (strcmp((char*)data, "getValues") == 0) {
       notifyClients(getSliderValues());
@@ -111,10 +164,34 @@ void initWebSocket() {
   server.addHandler(&ws);
 } 
 
+float measure(){ // Измерение потребляемого тока;
+  float cur = analogRead(A0);
+  cur = (cur * 3.08) / 10.23 - 169.81;
+  return cur;
+}
+
+int DAC(int val){// Преобразование значения val (0 - 100) в напряжение 0 - 3V в 10битном формате
+  int voltage;
+  voltage = (169.81 + val) * 10.23 / 3.08;
+  return voltage;
+}
+
 void setup() {
   Serial.begin(115200);
   EEPROM.begin(4);
   EEPROM.get(0, dutyCycle);
+
+  pinMode(D0,OUTPUT);
+  pinMode(D6,OUTPUT);
+  pinMode(D3,OUTPUT);
+  pinMode(D4,OUTPUT);
+  
+  digitalWrite(D6,1);
+  digitalWrite(D0,0); // При нажатии кнопки сброса D6 0, D0 1
+
+  digitalWrite(D3,0);
+  digitalWrite(D4,1); // Кнопка включения
+
   // Serial.println("");
   // Serial.println(dutyCycle);
   dac.begin();
@@ -140,7 +217,7 @@ void setup() {
 }
 
 void loop() {
-  static uint64_t tmr, tmr2;
+  static uint64_t tmr, tmr2, tmrb1, tmrb2, tmrb3;
   static float current; // текущее значение тока
   static JSONVar CurVal;  
   static int dacval;
@@ -156,18 +233,41 @@ void loop() {
     tmr2 = millis();
     CurVal["CurrentValue"] = String(current);
     notifyClients(JSON.stringify(CurVal));
-  }  
+  }
+
+  if(Button1){
+    tmrb1 = millis();
+    digitalWrite(PositiveInput,Button1);
+    digitalWrite(NegativeInput,!Button1);
+  }
+  if(millis() - tmrb1 > 500){
+    tmrb1 = millis();
+    Button1 = false;
+    digitalWrite(PositiveInput,Button1);
+    digitalWrite(NegativeInput,!Button1);
+  }
+
+  if(Button2){
+    tmrb2 = millis();
+    digitalWrite(PowerON,!Button2);    
+  }
+  if(millis() - tmrb2 > 500){
+    tmrb2 = millis();
+    Button2 = false;
+    digitalWrite(PowerON,!Button2);  
+  }
+  
+  if(Button3){
+    tmrb3 = millis();
+    digitalWrite(PowerON,!Button3);    
+  }
+  if(millis() - tmrb3 > 5000){
+    tmrb3 = millis();
+    Button3 = false;
+    digitalWrite(PowerON,!Button3);  
+  }
+
+  // digitalWrite(EmergencyShutdown,Button4);
+
   ws.cleanupClients();
-}
-
-float measure(){ // Измерение потребляемого тока;
-  float cur = analogRead(A0);
-  cur = (cur * 3.08) / 10.23 - 169.81;
-  return cur;
-}
-
-int DAC(int val){// Преобразование значения val (0 - 100) в напряжение 0 - 3V в 10битном формате
-  int voltage;
-  voltage = (169.81 + val) * 10.23 / 3.08;
-  return voltage;
 }

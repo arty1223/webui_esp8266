@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP8266 Monitor</title>
+    <title>PowerMonitor</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.png">
@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="topnav">
-        <h1>ESP8266 PowerMonitor</h1>
+        <h1>PowerMonitor</h1>
     </div>
     <div class="content">
         <div class="card-grid">
@@ -20,17 +20,24 @@
             <div class="card">
                 <p class="card-title">Максимальный ток:</p>
                 <p class="switch">
-                    <input type="range" oninput="dinamycSlider(this.value)" onchange="updateSlider(this)" id="slider1" min="0" max="100" step="1" value ="0" class="slider" list="rangeList">
+                    <input type="range" oninput="dinamycSlider(this.value)" onchange="updateSlider(this)" id="slider1" min="0" max="100" step="1" value ="0" class="slider">
                 </p>
                 <p style="font-size:40px;margin:0" class="state"><span id="sliderValue"></span> A</p>
             </div>
-            <!-- <div class="card">
-                <p class="card-title"> Fader 3</p>
+            <div class="card">                
                 <p class="switch">
-                    <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1" value ="0" class="slider">
+                    <input type="submit" id="button1" class="butt" onclick="updateButton(this)" value="Сброс защиты" />                    
                 </p>
-                <p class="state">Brightness: <span id="sliderValue3"></span> &percnt;</p>
-            </div> -->
+                <p class="switch">
+                    <input type="button" id="button2" class="butt" onclick="updateButton(this)" value="Запуск ПК" />                    
+                </p>
+                <p class="switch">
+                    <input type="button" id="button3" class="butt" onclick="updateButton(this)"value="Отключениe" />                    
+                </p>
+                <!-- <p class="switch">
+                    <input type="button" id="button4" class="buttEM" onclick="updateButton(this)" value="Аварийное отключение" />                    
+                </p> -->
+            </div>
         </div>
     </div>
     <script src="script.js"></script>

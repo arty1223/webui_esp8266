@@ -2,12 +2,6 @@ var gateway = `ws://${window.location.hostname}/ws`;
 var websocket;
 window.addEventListener('load', onload);
 
-var buttlist = {
-    "button1":0,
-    "button2":0,
-    "button3":0,
-    "button4":0,
-}
 function onload(event) {
     initWebSocket();
 }
@@ -58,9 +52,10 @@ function updateColor(element, state){
 function updateButton(element) {
     var buttonNumber = element.id.charAt(element.id.length-1);
     var buttonValue = 0;
-    buttlist["button"+buttonNumber] = buttlist["button"+buttonNumber] == !buttlist["button"+buttonNumber] ? buttlist["button"+buttonNumber] : !buttlist["button"+buttonNumber];
-    buttonValue = buttlist["button"+buttonNumber];
-    websocket.send(buttonNumber+"b"+buttonValue.toString());
+    // buttlist["button"+buttonNumber] = buttlist["button"+buttonNumber] == !buttlist["button"+buttonNumber] ? buttlist["button"+buttonNumber] : !buttlist["button"+buttonNumber];
+    // buttonValue = buttlist["button"+buttonNumber];
+    websocket.send(buttonNumber+"b"+"a");
+
 }
 
 function onMessage(event) {
@@ -72,7 +67,6 @@ function onMessage(event) {
         if (key == "buttonValue3") continue;
         document.getElementById(key).innerHTML = myObj[key];        
         if (key == "sliderValue") document.getElementById("slider1").value = myObj[key];        
-    }
-    buttlist["button3"] = myObj["buttonValue3"];
+    }    
     updateColor("button3",myObj["buttonValue3"]);    
 }

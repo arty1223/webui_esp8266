@@ -165,10 +165,13 @@ void setup() {
   pinMode(Shutdown,OUTPUT);
   pinMode(PowerON,OUTPUT);
   
-  digitalWrite(PositiveInput,0); // При нажатии кнопки сброса D6 0, D0 1
+  digitalWrite(PositiveInput,0); // При нажатии кнопки сброса D2 0, D0 1
   digitalWrite(NegativeInput,1);
   digitalWrite(Shutdown,0);
   digitalWrite(PowerON,1); // Кнопка включения
+  delay(500);
+  digitalWrite(PositiveInput,1);
+  digitalWrite(NegativeInput,0);
 
   // Serial.println("");
   // Serial.println(dutyCycle);

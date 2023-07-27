@@ -3,12 +3,11 @@ var websocket;
 window.addEventListener('load', onload);
 
 var buttlist = {
-    "butt1":0,
-    "butt2":0,
-    "butt3":0,
-    "butt4":0,
+    "button1":0,
+    "button2":0,
+    "button3":0,
+    "button4":0,
 }
-
 function onload(event) {
     initWebSocket();
 }
@@ -47,13 +46,20 @@ function updateSlider(element) {
     websocket.send(sliderNumber+"s"+sliderValue.toString());
 }
 
+function updateColor(element, state){
+    if(state == true){            
+        document.getElementById(element).classList.replace("butt", "butt_d");        
+    }else{               
+        document.getElementById(element).classList.replace("butt_d", "butt");
+    }
+  
+}
+
 function updateButton(element) {
     var buttonNumber = element.id.charAt(element.id.length-1);
     var buttonValue = 0;
-    buttlist["butt"+buttonNumber] = !buttlist["butt"+buttonNumber];
-    buttonValue = buttlist["butt"+buttonNumber];
-    // document.getElementById("buttonValue").innerHTML = buttonValue;
-    // console.log(buttonValue);
+    buttlist["button"+buttonNumber] = buttlist["button"+buttonNumber] == !buttlist["button"+buttonNumber] ? buttlist["button"+buttonNumber] : !buttlist["button"+buttonNumber];
+    buttonValue = buttlist["button"+buttonNumber];
     websocket.send(buttonNumber+"b"+buttonValue.toString());
 }
 
@@ -61,13 +67,12 @@ function onMessage(event) {
     console.log(event.data);
     var myObj = JSON.parse(event.data);
     var keys = Object.keys(myObj);
-    // console.log(event.data);
-    // document.getElementById("CurrentValue").value = myObj["CurrentValue"];
-    // document.getElementById("slider1").value = myObj["sliderValue"];
     for (var i = 0; i < keys.length; i++){
-        var key = keys[i];
-        document.getElementById(key).innerHTML = myObj[key];
-        if (key == "CurrentValue")break;        
-        document.getElementById("slider"+ (i+1).toString()).value = myObj[key];
+        var key = keys[i];       
+        if (key == "buttonValue3") continue;
+        document.getElementById(key).innerHTML = myObj[key];        
+        if (key == "sliderValue") document.getElementById("slider1").value = myObj[key];        
     }
+    buttlist["button3"] = myObj["buttonValue3"];
+    updateColor("button3",myObj["buttonValue3"]);    
 }

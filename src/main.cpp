@@ -10,7 +10,7 @@
 #define AP_SSID "ИМЯ СЕТИ"
 #define AP_PASS "ПАРОЛЬ"
 
-// Create AsyncWebServer object on port 80
+// Создадим сервер на 80 порту
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 TLC5615 dac(D8);
@@ -18,13 +18,9 @@ TLC5615 dac(D8);
 String message = "";
 String sliderValue = "0";
 
-String ButtValue1 = "false";
-String ButtValue2 = "false";
-String ButtValue3 = "false";
-String ButtValue4 = "false";
-
+// Назначим пины
 #define PowerON D4
-#define EmergencyShutdown D3
+#define Shutdown D3
 #define PositiveInput D0
 #define NegativeInput D6
 
@@ -32,31 +28,36 @@ int dutyCycle;
 
 bool Button1,Button2,Button3,Button4;
 
-//Json Variable to Hold Values
+//Json переменная для хранения и передачи на сервер инфы
 JSONVar Values;
+// JSONVar ButtVal;
 
 void handleMain();
 void handleNotFound();
 
-//Get Values
-String getSliderValues(){  
+// Обьявим функции для цапа и измерения тока
+float measure();
+int DAC(int val);
+
+//Получим значения и запишем их в Values
+String getValues(){
+  Values["buttonValue3"] = String(Button3);
   Values["sliderValue"] = sliderValue;
   String jsonString = JSON.stringify(Values);
   return jsonString;
 }
 
-String getButtonValues(){  
-  Values["buttonValue1"] = ButtValue1;
-  Values["buttonValue2"] = ButtValue2;
-  Values["buttonValue3"] = ButtValue3;
-  Values["buttonValue4"] = ButtValue4;
-  String jsonString = JSON.stringify(Values);
-  return jsonString;
-}
+// String getButtonValues(){  
+//   // ButtVal["buttonValue1"] = String(Button1);
+//   // ButtVal["buttonValue2"] = String(Button2);
+//   ButtVal["buttonValue3"] = String(Button3);
+//   // ButtVal["buttonValue4"] = String(Button4);
+//   String jsonString = JSON.stringify(ButtVal);
+//   return jsonString;
+// }
 
-float measure();
-int DAC(int val);
-// Initialize LittleFS
+
+// Подключим LittleFS
 void initFS() {
   if (!LittleFS.begin()) {
     Serial.println("An error has occurred while mounting LittleFS");
@@ -70,12 +71,11 @@ void initFS() {
 void initWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(AP_SSID, AP_PASS);
-
+  Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-  }
- 
+  } 
   Serial.println(WiFi.localIP());
 }
 
@@ -84,60 +84,37 @@ void notifyClients(String Values) {
   ws.textAll(Values);
 }
 
-//обработка сообщение от js
+//обработка сообщений от js
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    message = (char*)data;    
+    message = (char*)data;   
     if (message.indexOf("1s") >= 0) {
-      sliderValue = message.substring(2);      
-      // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
+      sliderValue = message.substring(2);
       dutyCycle = sliderValue.toInt();
-      // Serial.println(dutyCycle);
-      // Serial.print(getSliderValues());
-      notifyClients(getSliderValues());
+      notifyClients(getValues());      
       EEPROM.put(0,dutyCycle);
       EEPROM.commit();      
     }
     
-    bool val;
-    if (message.substring(2) == "true"){
-      val = true;
-    }else{
-      val = false;
-    }
-
-    if (message.indexOf("1b") >= 0) {
-      // ButtValue1 = message.substring(2);      
-      // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
-      Button1 = val;
-      // Serial.println(Button1);
-      // Serial.println(getButtonValues());
+    bool val = message.substring(2) == "true" ? true : false;    
+    
+    if (message.indexOf("1b") >= 0) { 
+      Button1 = val;      
     }
     if (message.indexOf("2b") >= 0) {
-      // ButtValue2 = message.substring(2);      
-      // Button1 = map(sliderValue.toInt(), 0, 100, 0, 1023);
       Button2 = val;
-      // Serial.println(Button2);
-      // Serial.println(getButtonValues());
     }
     if (message.indexOf("3b") >= 0) {
-      // ButtValue3 = message.substring(2);      
-      // Button1 = map(sliderValue.toInt(), 0, 100, 0, 1023);
-      Button3 = val;
-      // Serial.println(Button3);
-      // Serial.println(getButtonValues());
+      Button3 = !Button3;      
     }
     if (message.indexOf("4b") >= 0) {
-      // ButtValue4 = message.substring(2);      
-      // dutyCycle = map(sliderValue.toInt(), 0, 100, 0, 1023);
       Button4 = val;
-      // Serial.println(Button4);
-      // Serial.println(getButtonValues());
     }
+
     if (strcmp((char*)data, "getValues") == 0) {
-      notifyClients(getSliderValues());
+      notifyClients(getValues());
     }
   }
 }
@@ -186,8 +163,8 @@ void setup() {
   pinMode(D3,OUTPUT);
   pinMode(D4,OUTPUT);
   
-  digitalWrite(D6,1);
   digitalWrite(D0,0); // При нажатии кнопки сброса D6 0, D0 1
+  digitalWrite(D6,1);
 
   digitalWrite(D3,0);
   digitalWrite(D4,1); // Кнопка включения
@@ -200,27 +177,24 @@ void setup() {
   initFS();
   initWiFi();
   initWebSocket();
-  
   //Коренной каталог
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(LittleFS, "/index.html", "text/html");
-  });
-  
-  server.serveStatic("/", LittleFS, "/");
-  
+  });  
+  server.serveStatic("/", LittleFS, "/");  
   server.begin();
 
   sliderValue = String(dutyCycle);
   Values["sliderValue"] = sliderValue;
-  // Serial.println(JSON.stringify(Values));
-  notifyClients(JSON.stringify(Values));
+  notifyClients(JSON.stringify(Values));  
 }
 
 void loop() {
-  static uint64_t tmr, tmr2, tmrb1, tmrb2, tmrb3;
+  static uint64_t tmr, tmr2, tmrb1, tmrb2;
   static float current; // текущее значение тока
   static JSONVar CurVal;  
   static int dacval;
+  static bool ButtState1, ButtState2;
 
   dacval = DAC(dutyCycle);
   dac.analogWrite(dacval);
@@ -232,42 +206,32 @@ void loop() {
   if(millis() - tmr2 > 250){
     tmr2 = millis();
     CurVal["CurrentValue"] = String(current);
+    CurVal["buttonValue3"] = String(Button3);
     notifyClients(JSON.stringify(CurVal));
   }
 
-  if(Button1){
+  if(Button1 != ButtState1){
     tmrb1 = millis();
-    digitalWrite(PositiveInput,Button1);
-    digitalWrite(NegativeInput,!Button1);
+    digitalWrite(PositiveInput,1);
+    digitalWrite(NegativeInput,0);
+    ButtState1 = Button1;
   }
   if(millis() - tmrb1 > 500){
     tmrb1 = millis();
-    Button1 = false;
-    digitalWrite(PositiveInput,Button1);
-    digitalWrite(NegativeInput,!Button1);
+    digitalWrite(PositiveInput,0);
+    digitalWrite(NegativeInput,1);
   }
 
-  if(Button2){
+  if(Button2 != ButtState2){
     tmrb2 = millis();
-    digitalWrite(PowerON,!Button2);    
+    digitalWrite(PowerON,0);
+    ButtState2 = Button2;
   }
   if(millis() - tmrb2 > 500){
     tmrb2 = millis();
-    Button2 = false;
-    digitalWrite(PowerON,!Button2);  
-  }
-  
-  if(Button3){
-    tmrb3 = millis();
-    digitalWrite(PowerON,!Button3);    
-  }
-  if(millis() - tmrb3 > 5000){
-    tmrb3 = millis();
-    Button3 = false;
-    digitalWrite(PowerON,!Button3);  
+    digitalWrite(PowerON,1);
   }
 
-  // digitalWrite(EmergencyShutdown,Button4);
-
+  digitalWrite(Shutdown, Button3); 
   ws.cleanupClients();
 }

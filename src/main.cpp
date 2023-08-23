@@ -23,8 +23,8 @@ String sliderValue = "0";
 #define PowerON D4
 #define Shutdown D3
 #define PositiveInput D0
-#define NegativeInput D6
-
+#define NegativeInput D2
+ 
 int dutyCycle;
 
 bool Button1,Button2,Button3,Button4;
@@ -42,6 +42,8 @@ int DAC(int val);
 
 //Получим значения и запишем их в Values
 String getValues(){
+  // Values["buttonValue1"] = String(Button1);
+  // Values["buttonValue2"] = String(Button2);
   Values["buttonValue3"] = String(Button3);
   Values["sliderValue"] = sliderValue;
   String jsonString = JSON.stringify(Values);
@@ -100,19 +102,19 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
       EEPROM.commit();      
     }
     
-    bool val = message.substring(2) == "true" ? true : false;    
+    // bool val = message.substring(2) == "true" ? true : false;
     
     if (message.indexOf("1b") >= 0) { 
-      Button1 = val;      
+      Button1 = !Button1;      
     }
     if (message.indexOf("2b") >= 0) {
-      Button2 = val;
+      Button2 = !Button2;
     }
     if (message.indexOf("3b") >= 0) {
       Button3 = !Button3;      
     }
     if (message.indexOf("4b") >= 0) {
-      Button4 = val;
+      Button4 = !Button4;
     }
 
     if (strcmp((char*)data, "getValues") == 0) {
@@ -151,7 +153,7 @@ float measure(){ // Измерение потребляемого тока;
 
 int DAC(int val){// Преобразование значения val (0 - 100) в напряжение 0 - 3V в 10битном формате
   int voltage;
-  voltage = (169.81 + val) * 10.23 / 3.08;
+  voltage = (169.81 + val) * 10.23 / 5;
   return voltage;
 }
 
@@ -160,16 +162,18 @@ void setup() {
   EEPROM.begin(4);
   EEPROM.get(0, dutyCycle);
 
-  pinMode(D0,OUTPUT);
-  pinMode(D6,OUTPUT);
-  pinMode(D3,OUTPUT);
-  pinMode(D4,OUTPUT);
+  pinMode(PositiveInput,OUTPUT);
+  pinMode(NegativeInput,OUTPUT);
+  pinMode(Shutdown,OUTPUT);
+  pinMode(PowerON,OUTPUT);
   
-  digitalWrite(D0,0); // При нажатии кнопки сброса D6 0, D0 1
-  digitalWrite(D6,1);
-
-  digitalWrite(D3,0);
-  digitalWrite(D4,1); // Кнопка включения
+  digitalWrite(PositiveInput,0); // При нажатии кнопки сброса D2 0, D0 1
+  digitalWrite(NegativeInput,1);
+  digitalWrite(Shutdown,0);
+  digitalWrite(PowerON,1); // Кнопка включения
+  delay(500);
+  digitalWrite(PositiveInput,1);
+  digitalWrite(NegativeInput,0);
 
   // Serial.println("");
   // Serial.println(dutyCycle);
@@ -221,14 +225,14 @@ void loop() {
 
   if(Button1 != ButtState1){
     tmrb1 = millis();
-    digitalWrite(PositiveInput,1);
     digitalWrite(NegativeInput,0);
+    digitalWrite(PositiveInput,1);    
     ButtState1 = Button1;
   }
   if(millis() - tmrb1 > 500){
     tmrb1 = millis();
-    digitalWrite(PositiveInput,0);
     digitalWrite(NegativeInput,1);
+    digitalWrite(PositiveInput,0);    
   }
 
   if(Button2 != ButtState2){

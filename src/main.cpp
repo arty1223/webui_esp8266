@@ -10,6 +10,7 @@
 #define AP_SSID "ИМЯ СЕТИ"
 #define AP_PASS "ПАРОЛЬ"
 
+
 // Создадим сервер на 80 порту
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -75,7 +76,8 @@ void initWiFi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-  } 
+  }
+  Serial.println("connected");
   Serial.println(WiFi.localIP());
 }
 
@@ -190,7 +192,7 @@ void setup() {
 }
 
 void loop() {
-  static uint64_t tmr, tmr2, tmrb1, tmrb2;
+  static uint64_t tmr, tmr2, tmrb1, tmrb2, wifitmr;
   static float current; // текущее значение тока
   static JSONVar CurVal;  
   static int dacval;
@@ -208,6 +210,13 @@ void loop() {
     CurVal["CurrentValue"] = String(current);
     CurVal["buttonValue3"] = String(Button3);
     notifyClients(JSON.stringify(CurVal));
+  }
+  
+  if(millis() - wifitmr > 1000){ // проверка статуса сети
+    if (WiFi.status() != WL_CONNECTED){
+      Serial.println("WiFi down. Reconnecting"); 
+      initWiFi();
+    }
   }
 
   if(Button1 != ButtState1){

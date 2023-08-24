@@ -22,7 +22,7 @@ String sliderValue = "0";
 // Назначим пины
 #define PowerON D4
 #define Shutdown D3
-#define PositiveInput D0
+#define PositiveInput D1
 #define NegativeInput D2
  
 int dutyCycle;

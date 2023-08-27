@@ -10,9 +10,11 @@
 #define AP_SSID "ИМЯ СЕТИ"
 #define AP_PASS "ПАРОЛЬ"
 
+const char* http_username = "admin";
+const char* http_password = "admin";
 
-// Создадим сервер на 80 порту
-AsyncWebServer server(80);
+// Создадим сервер на 2525 порту
+AsyncWebServer server(2525);
 AsyncWebSocket ws("/ws");
 TLC5615 dac(D8);
 
@@ -22,8 +24,8 @@ String sliderValue = "0";
 // Назначим пины
 #define PowerON D4
 #define Shutdown D3
-#define PositiveInput D1
 #define NegativeInput D2
+#define PositiveInput D1
  
 int dutyCycle;
 
@@ -73,12 +75,14 @@ void initFS() {
 // WiFi
 void initWiFi() {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(AP_SSID, AP_PASS);
+  WiFi.begin(AP_SSID, AP_PASS);  
   Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
   Serial.println("connected");
   Serial.println(WiFi.localIP());
 }
@@ -185,8 +189,17 @@ void setup() {
   initWebSocket();
   //Коренной каталог
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
     request->send(LittleFS, "/index.html", "text/html");
-  });  
+  });
+  server.on("/logout", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(401);
+  });
+  server.on("/logged-out", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(LittleFS, "/logout.html", "text/html");
+  });
+
   server.serveStatic("/", LittleFS, "/");  
   server.begin();
 
@@ -196,18 +209,23 @@ void setup() {
 }
 
 void loop() {
-  static uint64_t tmr, tmr2, tmrb1, tmrb2, wifitmr;
+  static uint64_t tmr, tmr2, tmrb1, tmrb2, tmrb4, wifitmr;
   static float current; // текущее значение тока
   static JSONVar CurVal;  
   static int dacval;
-  static bool ButtState1, ButtState2;
+  static bool ButtState1, ButtState2, ButtState4, lock1, lock2;
+ 
 
   dacval = DAC(dutyCycle);
   dac.analogWrite(dacval);
-
+  
   if(millis() - tmr > 50){    
     tmr = millis();
-    current = measure();
+    current = measure();    
+    // Serial.print(Button1);Serial.print(' ');
+    // Serial.print(Button2);Serial.print(' ');
+    // Serial.print(Button3);Serial.print(' ');
+    // Serial.println(Button4);
   }
   if(millis() - tmr2 > 250){
     tmr2 = millis();
@@ -216,12 +234,15 @@ void loop() {
     notifyClients(JSON.stringify(CurVal));
   }
   
-  if(millis() - wifitmr > 1000){ // проверка статуса сети
-    if (WiFi.status() != WL_CONNECTED){
-      Serial.println("WiFi down. Reconnecting"); 
-      initWiFi();
-    }
-  }
+  // if(millis() - wifitmr > 1000){ // проверка статуса сети
+  //   // if (WiFi.status() != WL_CONNECTED){
+  //   //   Serial.println("WiFi down. Reconnecting"); 
+  //   //   initWiFi();
+  //   // }
+  //   Serial.println("connected");
+  //   Serial.println(WiFi.localIP());
+  //   wifitmr = millis();
+  // }
 
   if(Button1 != ButtState1){
     tmrb1 = millis();
@@ -235,16 +256,31 @@ void loop() {
     digitalWrite(PositiveInput,0);    
   }
 
-  if(Button2 != ButtState2){
+  if(Button2 != ButtState2 && !lock2){
     tmrb2 = millis();
     digitalWrite(PowerON,0);
     ButtState2 = Button2;
+    lock1 = 1;
   }
-  if(millis() - tmrb2 > 500){
+  if(millis() - tmrb2 > 500 && !lock2){
     tmrb2 = millis();
     digitalWrite(PowerON,1);
+    lock1 = 0;
   }
 
-  digitalWrite(Shutdown, Button3); 
+  if(Button4 != ButtState4 && !lock1){
+    tmrb4 = millis();
+    digitalWrite(PowerON,0);
+    ButtState4 = Button4;
+    lock2 = 1;
+  }
+  if(millis() - tmrb4 > 5000 && !lock1){
+    tmrb4 = millis();
+    digitalWrite(PowerON,1);    
+    lock2 = 0;
+  }
+
+
+  digitalWrite(Shutdown, Button3);
   ws.cleanupClients();
 }

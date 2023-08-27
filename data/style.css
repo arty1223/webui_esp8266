@@ -6,6 +6,9 @@ html {
   h1 {
     font-size: 1.8rem;
     color: white;
+    align-items: center;
+    text-align: left;
+    padding-left: 1rem;
   }
   p {
     font-size: 1.4rem;
@@ -83,6 +86,13 @@ html {
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+  }
+  .butt.butt-logout {    
+    box-sizing: content-box;
+    width: auto;    
+    float: right;
+    padding: 0.5rem 1.75rem;
+    margin: 0 auto ;
   }
   .buttEM {
     background-image: linear-gradient(-180deg, #e23737 0%, #c81e1e 100%);

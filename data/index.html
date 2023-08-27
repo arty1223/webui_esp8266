@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="topnav">
-        <h1>PowerMonitor</h1>
+        <h1 class="switch">PowerMonitor<input type="button" id="button0" class="butt butt-logout" onclick="logout()" value="Выход" /></h1>
     </div>
     <div class="content">
         <div class="card-grid">
@@ -33,11 +33,10 @@
                 </p>
                 <p class="switch">
                     <input type="button" id="button3" class="butt" onclick="updateButton(this)" value="Отключениe" />                    
-                    <!-- <input type="checkbox" id="switch" /><label for="switch">Toggle</label> -->
                 </p>
-                <!-- <p class="switch">
+                <p class="switch">
                     <input type="button" id="button4" class="buttEM" onclick="updateButton(this)" value="Аварийное отключение" />                    
-                </p> -->
+                </p>
             </div>
         </div>
     </div>

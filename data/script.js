@@ -1,4 +1,4 @@
-var gateway = `ws://${window.location.hostname}/ws`;
+var gateway = `ws://${window.location.hostname}:2525/ws`;
 var websocket;
 window.addEventListener('load', onload);
 
@@ -56,6 +56,13 @@ function updateButton(element) {
     // buttonValue = buttlist["button"+buttonNumber];
     websocket.send(buttonNumber+"b"+"a");
 
+}
+
+function logout(){
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/logout.html", true);
+    xhr.send();
+    setTimeout(function(){ window.open("/logged-out","_self"); }, 250);
 }
 
 function onMessage(event) {
